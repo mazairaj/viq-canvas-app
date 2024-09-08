@@ -36,3 +36,19 @@
     transform: rotate(360deg);
   }
 }
+
+.App {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.toolbar {
+  display: flex;
+  gap: 20px;
+  margin: 10px 0;
+}
+
+canvas {
+  cursor: crosshair;
+}

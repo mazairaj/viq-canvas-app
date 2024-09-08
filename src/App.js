@@ -1,23 +1,24 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from "react";
+import Canvas from "./components/Canvas";
+import Toolbar from "./components/Toolbar";
+import "./App.css";
 
 function App() {
+  const [penColor, setPenColor] = useState("black");
+  const [penWidth, setPenWidth] = useState(5);
+  const [penOpacity, setPenOpacity] = useState(1);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <Toolbar
+        penColor={penColor}
+        setPenColor={setPenColor}
+        penWidth={penWidth}
+        setPenWidth={setPenWidth}
+        penOpacity={penOpacity}
+        setPenOpacity={setPenOpacity}
+      />
+      <Canvas penColor={penColor} penWidth={penWidth} penOpacity={penOpacity} />
     </div>
   );
 }
