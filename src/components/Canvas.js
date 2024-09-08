@@ -6,8 +6,7 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState(null);
   const [currentPos, setCurrentPos] = useState(null);
-  const [shapes, setShapes] = useState([]); // Store drawn shapes
-  const [penPaths, setPenPaths] = useState([]); // Store freehand drawings
+  const [elements, setElements] = useState([]); // Unified list for shapes and paths
   const [currentPenPath, setCurrentPenPath] = useState([]); // Store current freehand drawing path
 
   // Draw an individual shape
@@ -43,30 +42,37 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
     }
   }, []);
 
-  // Draw all existing shapes and freehand drawings
+  // Draw all existing elements (both shapes and paths)
   const drawAll = useCallback(() => {
-    // Draw all shapes
-    shapes.forEach((shape) => {
-      drawShape(shape.type, shape.x, shape.y, shape.width, shape.height, shape);
+    elements.forEach((element) => {
+      if (element.type === "path") {
+        // Draw freehand path
+        contextRef.current.strokeStyle = element.strokeStyle;
+        contextRef.current.lineWidth = element.lineWidth;
+        contextRef.current.beginPath();
+
+        element.path.forEach(({ x, y }, index) => {
+          if (index === 0) {
+            contextRef.current.moveTo(x, y);
+          } else {
+            contextRef.current.lineTo(x, y);
+          }
+        });
+
+        contextRef.current.stroke();
+      } else if (element.type === "shape") {
+        // Draw shape
+        drawShape(
+          element.shapeType,
+          element.x,
+          element.y,
+          element.width,
+          element.height,
+          element
+        );
+      }
     });
-
-    // Draw all freehand paths
-    penPaths.forEach((path) => {
-      contextRef.current.strokeStyle = path.strokeStyle; // Use the color saved with this path
-      contextRef.current.lineWidth = path.lineWidth; // Use the width saved with this path
-      contextRef.current.beginPath();
-
-      path.path.forEach(({ x, y }, index) => {
-        if (index === 0) {
-          contextRef.current.moveTo(x, y);
-        } else {
-          contextRef.current.lineTo(x, y);
-        }
-      });
-
-      contextRef.current.stroke();
-    });
-  }, [shapes, penPaths, drawShape]);
+  }, [elements, drawShape]);
 
   // Initialize canvas and context
   useEffect(() => {
@@ -110,11 +116,12 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
 
     if (mode === "draw") {
       // Save the freehand path on mouse up with its own properties
-      setPenPaths((prevPaths) => [
-        ...prevPaths,
+      setElements((prevElements) => [
+        ...prevElements,
         {
-          strokeStyle: penColor, // Store the color used for this drawing
-          lineWidth: penWidth, // Store the width used for this drawing
+          type: "path", // Identify this element as a freehand path
+          strokeStyle: penColor,
+          lineWidth: penWidth,
           path: currentPenPath, // Save the entire path drawn in this session
         },
       ]);
@@ -127,16 +134,17 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
       const width = currentPos.x - startPos.x;
       const height = currentPos.y - startPos.y;
 
-      setShapes((prevShapes) => [
-        ...prevShapes,
+      setElements((prevElements) => [
+        ...prevElements,
         {
-          type: selectedShape,
+          type: "shape", // Identify this element as a shape
+          shapeType: selectedShape, // Store the shape type
           x: startPos.x,
           y: startPos.y,
           width,
           height,
-          strokeStyle: penColor, // Store the color used for this shape
-          lineWidth: penWidth, // Store the width used for this shape
+          strokeStyle: penColor,
+          lineWidth: penWidth,
         },
       ]);
 
@@ -171,11 +179,9 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
       if (mode === "shape" && startPos) {
         setCurrentPos({ x: offsetX, y: offsetY });
 
-        // Clear only the shape area (preserving the rest of the canvas)
+        // Clear the canvas and redraw all elements
         const canvas = canvasRef.current;
         contextRef.current.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Redraw all previous shapes and paths before previewing the new shape
         drawAll();
 
         // Draw the shape preview
