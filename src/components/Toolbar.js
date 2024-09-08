@@ -1,13 +1,6 @@
 import React from "react";
 
-const Toolbar = ({
-  penColor,
-  setPenColor,
-  penWidth,
-  setPenWidth,
-  penOpacity,
-  setPenOpacity,
-}) => {
+const Toolbar = ({ penColor, setPenColor, penWidth, setPenWidth }) => {
   return (
     <div className="toolbar">
       <label>
@@ -26,17 +19,6 @@ const Toolbar = ({
           max="50"
           value={penWidth}
           onChange={(e) => setPenWidth(e.target.value)}
-        />
-      </label>
-      <label>
-        Opacity:
-        <input
-          type="range"
-          min="0.1"
-          max="1"
-          step="0.1"
-          value={penOpacity}
-          onChange={(e) => setPenOpacity(e.target.value)}
         />
       </label>
     </div>

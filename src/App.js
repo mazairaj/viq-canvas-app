@@ -7,7 +7,6 @@ import "./App.css";
 function App() {
   const [penColor, setPenColor] = useState("black");
   const [penWidth, setPenWidth] = useState(5);
-  const [penOpacity, setPenOpacity] = useState(1);
   const [selectedShape, setSelectedShape] = useState(null); // Track selected shape
   const [mode, setMode] = useState("draw"); // Track drawing mode ('draw' or 'shape')
 
@@ -32,14 +31,11 @@ function App() {
           setPenColor={setPenColor}
           penWidth={penWidth}
           setPenWidth={setPenWidth}
-          penOpacity={penOpacity}
-          setPenOpacity={setPenOpacity}
         />
         <button onClick={handleToggleDrawMode}>Switch to Draw Mode</button>
         <Canvas
           penColor={penColor}
           penWidth={penWidth}
-          penOpacity={penOpacity}
           selectedShape={selectedShape}
           mode={mode} // Pass the current mode to the canvas
         />
