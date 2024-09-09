@@ -1,4 +1,10 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 
 const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
   const canvasRef = useRef(null);
@@ -45,6 +51,14 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
   const handlePointerUp = () => {
     lastDistance.current = 0;
   };
+
+  //memoization to optimation transformation function
+  const transformedCoords = useMemo(() => {
+    return (offsetX, offsetY) => ({
+      x: (offsetX - pan.x) / zoom,
+      y: (offsetY - pan.y) / zoom,
+    });
+  }, [pan.x, pan.y, zoom]);
 
   // Handle panning using mouse or touch
   const handlePan = useCallback((deltaX, deltaY) => {
@@ -180,8 +194,10 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
   const startDrawing = useCallback(
     ({ nativeEvent }) => {
       const { offsetX, offsetY } = nativeEvent;
-      const transformedX = (offsetX - pan.x) / zoom;
-      const transformedY = (offsetY - pan.y) / zoom;
+      const { x: transformedX, y: transformedY } = transformedCoords(
+        offsetX,
+        offsetY
+      );
       if (mode === "shape" && selectedShape) {
         setStartPos({ x: transformedX, y: transformedY });
         setIsDrawing(true);
@@ -256,9 +272,10 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
     ({ nativeEvent }) => {
       if (!isDrawing) return;
       const { offsetX, offsetY } = nativeEvent;
-      const transformedX = (offsetX - pan.x) / zoom;
-      const transformedY = (offsetY - pan.y) / zoom;
-
+      const { x: transformedX, y: transformedY } = transformedCoords(
+        offsetX,
+        offsetY
+      );
       if (mode === "shape" && startPos) {
         setCurrentPos({ x: transformedX, y: transformedY });
         const canvas = canvasRef.current;
