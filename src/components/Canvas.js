@@ -121,6 +121,7 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
 
   // Draw all elements, applying zoom and pan transformations
   const drawAll = useCallback(() => {
+    console.log("DRAW ALL");
     const canvas = canvasRef.current;
     const context = contextRef.current;
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -193,6 +194,7 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
   // Handle the start of drawing (either freehand or shape)
   const startDrawing = useCallback(
     ({ nativeEvent }) => {
+      console.log("START", penOpacity);
       const { offsetX, offsetY } = nativeEvent;
       const { x: transformedX, y: transformedY } = transformedCoords(
         offsetX,
@@ -202,6 +204,7 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
         setStartPos({ x: transformedX, y: transformedY });
         setIsDrawing(true);
       } else if (mode === "draw") {
+        console.log("start drawing", penWidth, penOpacity);
         contextRef.current.strokeStyle = penColor;
         contextRef.current.lineWidth = penWidth / zoom;
         contextRef.current.globalAlpha = penOpacity;
@@ -211,6 +214,8 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
         contextRef.current.scale(zoom, zoom);
         contextRef.current.moveTo(transformedX, transformedY);
         contextRef.current.restore();
+        console.log("TWO:", contextRef.current.globalAlpha);
+
         setCurrentPenPath([{ x: transformedX, y: transformedY }]);
         setIsDrawing(true);
       }
@@ -270,6 +275,9 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
   // Inside the draw function
   const draw = useCallback(
     ({ nativeEvent }) => {
+      contextRef.current.strokeStyle = penColor;
+      contextRef.current.lineWidth = penWidth / zoom;
+      contextRef.current.globalAlpha = penOpacity;
       if (!isDrawing) return;
       const { offsetX, offsetY } = nativeEvent;
       const { x: transformedX, y: transformedY } = transformedCoords(
@@ -296,6 +304,12 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
         contextRef.current.save();
         contextRef.current.translate(pan.x, pan.y);
         contextRef.current.scale(zoom, zoom);
+
+        // Set context properties before each stroke
+        contextRef.current.strokeStyle = penColor;
+        contextRef.current.lineWidth = penWidth / zoom;
+        contextRef.current.globalAlpha = penOpacity;
+
         contextRef.current.lineTo(transformedX, transformedY);
         contextRef.current.stroke();
         contextRef.current.restore();

@@ -2,6 +2,58 @@
 
 Take Home Challenge for VibeIQ
 
+This project is a simple drawing application built with React, inspired by Excalidraw. It allows users to draw on a canvas using a pen/highlighter tool and navigate the canvas with pan and zoom functionality.
+
+## Features
+
+- Pen/Highlighter tool
+  - Adjustable color
+  - Adjustable width
+  - Adjustable opacity
+- Canvas navigation
+
+  - Pan using trackpad or mouse
+  - Zoom in/out using trackpad gestures or mouse wheel
+
+  2. Open your browser and visit `http://localhost:3000`
+
+## How to Use
+
+- Select the pen tool from floating toolbar on the upper left side to start drawing (Selected by default)
+- Use the color picker to change the pen color
+- Adjust the pen width and opacity using the provided controls on the top toolbar
+- You can toggle between drawing shapes and freedrawing by using the buttons on the floating toolbar
+- Pan the canvas by dragging with two fingers on a trackpad or by holding the mouse button and dragging
+- Zoom in/out using pinch gestures on a trackpad or by using the mouse wheel while holding the Ctrl key
+- \*Note: Buttons on the floating toolbar have not yet been configured to perform actions.
+
+## Code Structure
+
+The main component of this application is the `Canvas` component, which handles:
+
+- Drawing functionality (freehand and shapes)
+- Pan and zoom interactions
+- State management for drawing elements
+
+## Performance Considerations
+
+- The application uses React hooks like `useCallback` and `useMemo` to optimize performance
+- Drawing operations are optimized to work efficiently with pan and zoom transformations
+
+## Limitations
+
+- There is no eraser tool
+- Existing drawings cannot be updated or deleted
+- Currently not enabled for multiple users
+
+## Future Improvements
+
+- Implement text input functionality
+- Add an eraser tool
+- Allow editing and deleting of existing drawings
+- Improve touch device support
+- Allow for multiple user editing
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
@@ -32,43 +84,3 @@ The build is minified and the filenames include the hashes.\
 Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
