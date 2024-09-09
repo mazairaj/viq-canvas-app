@@ -6,9 +6,72 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState(null);
   const [currentPos, setCurrentPos] = useState(null);
-  const [elements, setElements] = useState([]); // Unified list for shapes and paths
-  const [currentPenPath, setCurrentPenPath] = useState([]); // Store current freehand drawing path
+  const [elements, setElements] = useState([]);
+  const [currentPenPath, setCurrentPenPath] = useState([]);
 
+  const [pan, setPan] = useState({ x: 0, y: 0 }); // Track pan offset
+  const [zoom, setZoom] = useState(1); // Track zoom level
+  const lastDistance = useRef(0); // Store the last distance between two pointers
+  // Handle pinch zoom using touch events
+  const handlePointerMove = useCallback(
+    (e) => {
+      if (e.pointerType === "touch") {
+        e.preventDefault();
+        if (e.touches && e.touches.length === 2) {
+          const touch1 = e.touches[0];
+          const touch2 = e.touches[1];
+
+          // Calculate the distance between the two touches
+          const currentDistance = Math.sqrt(
+            Math.pow(touch2.clientX - touch1.clientX, 2) +
+              Math.pow(touch2.clientY - touch1.clientY, 2)
+          );
+
+          if (lastDistance.current) {
+            const scaleFactor = currentDistance / lastDistance.current;
+            setZoom((prevZoom) =>
+              Math.max(0.5, Math.min(prevZoom * scaleFactor, 3))
+            ); // Clamp zoom between 0.5 and 3
+          }
+
+          lastDistance.current = currentDistance;
+        }
+      }
+    },
+    [setZoom]
+  );
+
+  // Reset lastDistance on pointer up
+  const handlePointerUp = () => {
+    lastDistance.current = 0;
+  };
+
+  // Handle panning using mouse or touch
+  const handlePan = useCallback((deltaX, deltaY) => {
+    setPan((prevPan) => ({
+      x: prevPan.x + deltaX,
+      y: prevPan.y + deltaY,
+    }));
+  }, []);
+
+  // Handle trackpad (wheel event) for zoom and pan
+  const handleWheel = useCallback(
+    (e) => {
+      e.preventDefault(); // Prevent default scrolling behavior (including back/forward navigation)
+
+      if (e.ctrlKey) {
+        // Pinch-to-zoom action (ctrl + scroll)
+        const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1; // Zoom in or out
+        setZoom((prevZoom) =>
+          Math.max(0.5, Math.min(prevZoom * scaleFactor, 3))
+        ); // Clamp zoom
+      } else {
+        // Panning action
+        handlePan(-e.deltaX, -e.deltaY); // Invert the scroll direction for natural panning
+      }
+    },
+    [handlePan]
+  );
   // Draw an individual shape
   const drawShape = useCallback((shape, x, y, width, height, shapeProps) => {
     contextRef.current.strokeStyle = shapeProps.strokeStyle;
@@ -42,39 +105,44 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
     }
   }, []);
 
-  // Draw all existing elements (both shapes and paths)
+  // Draw all elements, applying zoom and pan transformations
   const drawAll = useCallback(() => {
+    const canvas = canvasRef.current;
+    const context = contextRef.current;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.save();
+    context.translate(pan.x, pan.y);
+    context.scale(zoom, zoom);
     elements.forEach((element) => {
       if (element.type === "path") {
-        // Draw freehand path
-        contextRef.current.strokeStyle = element.strokeStyle;
-        contextRef.current.lineWidth = element.lineWidth;
-        contextRef.current.globalAlpha = element.opacity;
-        contextRef.current.beginPath();
-
+        context.strokeStyle = element.strokeStyle;
+        context.lineWidth = element.lineWidth;
+        context.globalAlpha = element.opacity;
+        context.beginPath();
         element.path.forEach(({ x, y }, index) => {
           if (index === 0) {
-            contextRef.current.moveTo(x, y);
+            context.moveTo(x, y);
           } else {
-            contextRef.current.lineTo(x, y);
+            context.lineTo(x, y);
           }
         });
-
-        contextRef.current.stroke();
+        context.stroke();
       } else if (element.type === "shape") {
-        // Draw shape
         drawShape(
           element.shapeType,
           element.x,
           element.y,
           element.width,
           element.height,
-          element
+          {
+            ...element,
+            lineWidth: element.lineWidth / zoom,
+          }
         );
       }
     });
-  }, [elements, drawShape]);
-
+    context.restore();
+  }, [elements, pan, zoom, drawShape]);
   // Initialize canvas and context
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -87,79 +155,86 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
     context.lineCap = "round";
     contextRef.current = context;
 
-    // Initial draw of all items (but this is only when the app first loads)
-    drawAll();
+    drawAll(); // Initial draw of elements
   }, [drawAll]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    // Attach wheel and pointer events
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerup", handlePointerUp);
+    canvas.addEventListener("pointercancel", handlePointerUp);
+
+    // Clean up event listeners on unmount
+    return () => {
+      canvas.removeEventListener("wheel", handleWheel);
+      canvas.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("pointerup", handlePointerUp);
+      canvas.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [handleWheel, handlePointerMove]);
 
   // Handle the start of drawing (either freehand or shape)
   const startDrawing = useCallback(
     ({ nativeEvent }) => {
       const { offsetX, offsetY } = nativeEvent;
-
+      const transformedX = (offsetX - pan.x) / zoom;
+      const transformedY = (offsetY - pan.y) / zoom;
       if (mode === "shape" && selectedShape) {
-        setStartPos({ x: offsetX, y: offsetY });
+        setStartPos({ x: transformedX, y: transformedY });
         setIsDrawing(true);
       } else if (mode === "draw") {
-        contextRef.current.strokeStyle = penColor; // Apply pen color when starting the draw
-        contextRef.current.lineWidth = penWidth; // Apply pen width when starting the draw
-        contextRef.current.globalAlpha = penOpacity; // Apply pen opacity when starting the draw
+        contextRef.current.strokeStyle = penColor;
+        contextRef.current.lineWidth = penWidth / zoom;
+        contextRef.current.globalAlpha = penOpacity;
         contextRef.current.beginPath();
-        contextRef.current.moveTo(offsetX, offsetY);
-        setCurrentPenPath([{ x: offsetX, y: offsetY }]); // Initialize the current pen path
+        contextRef.current.save();
+        contextRef.current.translate(pan.x, pan.y);
+        contextRef.current.scale(zoom, zoom);
+        contextRef.current.moveTo(transformedX, transformedY);
+        contextRef.current.restore();
+        setCurrentPenPath([{ x: transformedX, y: transformedY }]);
         setIsDrawing(true);
       }
     },
-    [mode, selectedShape, penColor, penWidth, penOpacity]
+    [mode, selectedShape, penColor, penWidth, penOpacity, pan, zoom]
   );
-
   // Handle finishing drawing (either freehand or shape)
   const finishDrawing = useCallback(() => {
     if (!isDrawing) return;
-
     if (mode === "draw") {
-      // Save the freehand path on mouse up with its own properties
       setElements((prevElements) => [
         ...prevElements,
         {
-          type: "path", // Identify this element as a freehand path
+          type: "path",
           strokeStyle: penColor,
-          lineWidth: penWidth,
+          lineWidth: penWidth / zoom, // Store adjusted line width
           opacity: penOpacity,
-          path: currentPenPath, // Save the entire path drawn in this session
+          path: currentPenPath,
         },
       ]);
-
-      setCurrentPenPath([]); // Reset the current path
+      setCurrentPenPath([]);
     }
-
     if (mode === "shape" && startPos && currentPos) {
-      // Save the shape on mouse up with its own properties
       const width = currentPos.x - startPos.x;
       const height = currentPos.y - startPos.y;
-
       setElements((prevElements) => [
         ...prevElements,
         {
-          type: "shape", // Identify this element as a shape
-          shapeType: selectedShape, // Store the shape type
+          type: "shape",
+          shapeType: selectedShape,
           x: startPos.x,
           y: startPos.y,
           width,
           height,
           strokeStyle: penColor,
-          lineWidth: penWidth,
+          lineWidth: penWidth / zoom, // Store adjusted line width
           opacity: penOpacity,
         },
       ]);
-
-      // Draw the new shape directly on the canvas (without clearing)
-      drawShape(selectedShape, startPos.x, startPos.y, width, height, {
-        strokeStyle: penColor,
-        lineWidth: penWidth,
-        opacity: penOpacity,
-      });
     }
-
     setIsDrawing(false);
     setStartPos(null);
     setCurrentPos(null);
@@ -173,46 +248,43 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
     startPos,
     currentPos,
     currentPenPath,
-    drawShape,
+    zoom,
   ]);
-
   // Handle drawing as the user moves the mouse (either freehand or shape)
+  // Inside the draw function
   const draw = useCallback(
     ({ nativeEvent }) => {
       if (!isDrawing) return;
       const { offsetX, offsetY } = nativeEvent;
-
-      contextRef.current.globalAlpha = penOpacity;
+      const transformedX = (offsetX - pan.x) / zoom;
+      const transformedY = (offsetY - pan.y) / zoom;
 
       if (mode === "shape" && startPos) {
-        setCurrentPos({ x: offsetX, y: offsetY });
-
-        // Clear the canvas and redraw all elements
+        setCurrentPos({ x: transformedX, y: transformedY });
         const canvas = canvasRef.current;
         contextRef.current.clearRect(0, 0, canvas.width, canvas.height);
         drawAll();
-
-        // Draw the shape preview
-        const width = offsetX - startPos.x;
-        const height = offsetY - startPos.y;
+        const width = transformedX - startPos.x;
+        const height = transformedY - startPos.y;
+        contextRef.current.save();
+        contextRef.current.translate(pan.x, pan.y);
+        contextRef.current.scale(zoom, zoom);
         drawShape(selectedShape, startPos.x, startPos.y, width, height, {
           strokeStyle: penColor,
-          lineWidth: penWidth,
+          lineWidth: penWidth / zoom,
           opacity: penOpacity,
         });
+        contextRef.current.restore();
       } else if (mode === "draw") {
-        // Apply stroke and opacity settings
-        contextRef.current.strokeStyle = penColor; // Apply pen color while drawing
-        contextRef.current.lineWidth = penWidth; // Apply pen width while drawing
-
-        // Draw the freehand path in real time with opacity
-        contextRef.current.lineTo(offsetX, offsetY);
-        contextRef.current.stroke(); // Apply the stroke
-
-        // Add to the current pen path
+        contextRef.current.save();
+        contextRef.current.translate(pan.x, pan.y);
+        contextRef.current.scale(zoom, zoom);
+        contextRef.current.lineTo(transformedX, transformedY);
+        contextRef.current.stroke();
+        contextRef.current.restore();
         setCurrentPenPath((prevPath) => [
           ...prevPath,
-          { x: offsetX, y: offsetY },
+          { x: transformedX, y: transformedY },
         ]);
       }
     },
@@ -225,9 +297,10 @@ const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
       penOpacity,
       drawAll,
       selectedShape,
+      pan,
+      zoom,
     ]
   );
-
   return (
     <canvas
       ref={canvasRef}

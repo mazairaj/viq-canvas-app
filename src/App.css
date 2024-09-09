@@ -68,4 +68,5 @@ canvas {
   cursor: crosshair;
   border: 1px solid black;
   flex: 1;
+  touch-action: none;
 }
