@@ -59,7 +59,9 @@
 .toolbar {
   display: flex;
   gap: 20px;
+  position: fixed;
   margin: 10px 0;
+  padding: 10px 15px;
 }
 
 canvas {

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 
-const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
+const Canvas = ({ penColor, penWidth, penOpacity, selectedShape, mode }) => {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -13,7 +13,7 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
   const drawShape = useCallback((shape, x, y, width, height, shapeProps) => {
     contextRef.current.strokeStyle = shapeProps.strokeStyle;
     contextRef.current.lineWidth = shapeProps.lineWidth;
-
+    contextRef.current.globalAlpha = shapeProps.opacity;
     switch (shape) {
       case "rectangle":
         contextRef.current.strokeRect(x, y, width, height);
@@ -49,6 +49,7 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
         // Draw freehand path
         contextRef.current.strokeStyle = element.strokeStyle;
         contextRef.current.lineWidth = element.lineWidth;
+        contextRef.current.globalAlpha = element.opacity;
         contextRef.current.beginPath();
 
         element.path.forEach(({ x, y }, index) => {
@@ -101,13 +102,14 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
       } else if (mode === "draw") {
         contextRef.current.strokeStyle = penColor; // Apply pen color when starting the draw
         contextRef.current.lineWidth = penWidth; // Apply pen width when starting the draw
+        contextRef.current.globalAlpha = penOpacity; // Apply pen opacity when starting the draw
         contextRef.current.beginPath();
         contextRef.current.moveTo(offsetX, offsetY);
         setCurrentPenPath([{ x: offsetX, y: offsetY }]); // Initialize the current pen path
         setIsDrawing(true);
       }
     },
-    [mode, selectedShape, penColor, penWidth]
+    [mode, selectedShape, penColor, penWidth, penOpacity]
   );
 
   // Handle finishing drawing (either freehand or shape)
@@ -122,6 +124,7 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
           type: "path", // Identify this element as a freehand path
           strokeStyle: penColor,
           lineWidth: penWidth,
+          opacity: penOpacity,
           path: currentPenPath, // Save the entire path drawn in this session
         },
       ]);
@@ -145,6 +148,7 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
           height,
           strokeStyle: penColor,
           lineWidth: penWidth,
+          opacity: penOpacity,
         },
       ]);
 
@@ -152,6 +156,7 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
       drawShape(selectedShape, startPos.x, startPos.y, width, height, {
         strokeStyle: penColor,
         lineWidth: penWidth,
+        opacity: penOpacity,
       });
     }
 
@@ -163,6 +168,7 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
     mode,
     penColor,
     penWidth,
+    penOpacity,
     selectedShape,
     startPos,
     currentPos,
@@ -175,6 +181,8 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
     ({ nativeEvent }) => {
       if (!isDrawing) return;
       const { offsetX, offsetY } = nativeEvent;
+
+      contextRef.current.globalAlpha = penOpacity;
 
       if (mode === "shape" && startPos) {
         setCurrentPos({ x: offsetX, y: offsetY });
@@ -190,19 +198,34 @@ const Canvas = ({ penColor, penWidth, selectedShape, mode }) => {
         drawShape(selectedShape, startPos.x, startPos.y, width, height, {
           strokeStyle: penColor,
           lineWidth: penWidth,
+          opacity: penOpacity,
         });
       } else if (mode === "draw") {
+        // Apply stroke and opacity settings
         contextRef.current.strokeStyle = penColor; // Apply pen color while drawing
         contextRef.current.lineWidth = penWidth; // Apply pen width while drawing
+
+        // Draw the freehand path in real time with opacity
         contextRef.current.lineTo(offsetX, offsetY);
-        contextRef.current.stroke();
+        contextRef.current.stroke(); // Apply the stroke
+
+        // Add to the current pen path
         setCurrentPenPath((prevPath) => [
           ...prevPath,
           { x: offsetX, y: offsetY },
-        ]); // Add to the current path
+        ]);
       }
     },
-    [isDrawing, mode, startPos, penColor, penWidth, drawAll, selectedShape]
+    [
+      isDrawing,
+      mode,
+      startPos,
+      penColor,
+      penWidth,
+      penOpacity,
+      drawAll,
+      selectedShape,
+    ]
   );
 
   return (
